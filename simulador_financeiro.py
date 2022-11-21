@@ -19,6 +19,7 @@ def aumento_cumulativo(lista, porc_aumento):
 
 def simulador(data_inicio = '2021-09-01',
               data_fim = '2024-12-01',
+              aporte_inicial = 0,
               aporte_mensal = 0,
               aumento_aporte = 0,
 
@@ -52,8 +53,12 @@ def simulador(data_inicio = '2021-09-01',
 
     #Preenchendo coluna de aportes
     if len(dados_reais) == 0:
-        df['aporte'] = aumento_cumulativo([aporte_mensal] * len(df['data']),
-                                          aumento_aporte)
+        if aporte_inicial <= 0:
+            df['aporte'] = aumento_cumulativo([aporte_mensal] * len(df['data']),
+                                              aumento_aporte)
+        else:
+            df['aporte'] = aumento_cumulativo([aporte_inicial] + [aporte_mensal] * (len(df['data']) - 1),
+                                              aumento_aporte)
     else:
         aporte_artificial = ([aporte_mensal] * (len(df['data']) -
                                                 len(dados_reais['aporte'])))

@@ -48,6 +48,7 @@ def main():
 
         # Informações sobre aporte
         st.subheader('Aportes')
+        aporte_inicial = st.number_input("Qual será o primeiro aporte?", value=0.0)
         aporte_mensal = st.number_input("Quantos reais você deseja aportar por mês?", value=0.0)
         aumento_aporte = st.number_input("Qual a porcentagem de aumento desse aporte mês a mês?", value=0.0)
         aumento_aporte = aumento_aporte / 100
@@ -89,18 +90,19 @@ def main():
         st.table(df)
         st.markdown("""
         **data:** O aplicativo lê apenas o ano e o mês, mas o dia também precisa estar presente, é importante que o excel tenha entendido essa coluna como data
-
         **aporte:** É o valor que foi guardado no mês descrito na coluna data
-
         **custodia:** É o valor que você tinha disponível depois do aporte no fim do mês da data (esse valor precisa incluir os rendimentos para uma simulação mais realista)
         """)
         file = st.file_uploader('Abaixo, faça o upload de um arquivo excel:')
 
         if file is not None:
             upload_df = pd.read_excel(file)
-            upload_df_plot = upload_df.copy()
-            upload_df_plot.loc[:,'data'] = upload_df['data'].dt.strftime('%Y-%m-%d')
-            st.table(upload_df_plot)
+            if upload_df['data'].min() <= data_inicio:
+                upload_df_plot = upload_df.copy()
+                upload_df_plot.loc[:,'data'] = upload_df['data'].dt.strftime('%Y-%m-%d')
+                st.table(upload_df_plot)
+            else:
+                upload_df = []
         else:
             upload_df = []
 
@@ -110,6 +112,7 @@ def main():
     simulador(
         data_inicio = data_inicio,
         data_fim = data_fim,
+        aporte_inicial = aporte_inicial,
         aporte_mensal = aporte_mensal,
         aumento_aporte = aumento_aporte,
 

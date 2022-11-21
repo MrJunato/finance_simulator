@@ -4,6 +4,10 @@ import numpy as np
 from st_aggrid import AgGrid, GridUpdateMode
 from st_aggrid.grid_options_builder import GridOptionsBuilder
 from simulador_financeiro import simulador
+from datetime import datetime
+
+def diff_month(d1, d2):
+    return (d1.year - d2.year) * 12 + d1.month - d2.month + 1
 
 def main():
     ########## Sidebar ##########
@@ -89,20 +93,37 @@ def main():
 
         st.table(df)
         st.markdown("""
-        **data:** O aplicativo lê apenas o ano e o mês, mas o dia também precisa estar presente, é importante que o excel tenha entendido essa coluna como data
-        **aporte:** É o valor que foi guardado no mês descrito na coluna data
-        **custodia:** É o valor que você tinha disponível depois do aporte no fim do mês da data (esse valor precisa incluir os rendimentos para uma simulação mais realista)
+        - **data:** O aplicativo lê apenas o ano e o mês, mas o dia também precisa estar presente, é importante que o excel tenha entendido essa coluna como data
+        
+        - **aporte:** É o valor que foi guardado no mês descrito na coluna data
+        
+        - **custodia:** É o valor que você tinha disponível depois do aporte no fim do mês da data (esse valor precisa incluir os rendimentos para uma simulação mais realista)
+        
         """)
         file = st.file_uploader('Abaixo, faça o upload de um arquivo excel:')
 
         if file is not None:
             upload_df = pd.read_excel(file)
-            if upload_df['data'].min() <= data_inicio:
+            
+            fdata_inicio = datetime.strptime(data_inicio, '%Y-%m-%d')
+            primeira_data_ok = upload_df['data'].min() == fdata_inicio
+            primeira_data_nok = upload_df['data'].min() != fdata_inicio
+            
+            diff_datas = diff_month(upload_df['data'].max(), upload_df['data'].min())
+            qtd_datas_ok = diff_datas == len(upload_df)
+            qtd_datas_nok = diff_datas != len(upload_df)
+            
+            if primeira_data_ok & qtd_datas_ok:
                 upload_df_plot = upload_df.copy()
                 upload_df_plot.loc[:,'data'] = upload_df['data'].dt.strftime('%Y-%m-%d')
                 st.table(upload_df_plot)
             else:
                 upload_df = []
+                if primeira_data_nok:
+                    st.markdown('''*ATENÇÃO!!! A primeira data de seu arquivo não coincide com a primeira data que você passou nos controles, por conta disso a tabela não será utilizada, por favor atualize a data inicial ou seu arquivo*''')
+                elif qtd_datas_nok:
+                    st.markdown('''*ATENÇÃO!!! Existem meses faltando entre o primeiro e último mês de seu arquivo, por favor atualize seu arquivo para que ele possa ser utilizado*''')
+                
         else:
             upload_df = []
 

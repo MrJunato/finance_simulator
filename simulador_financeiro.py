@@ -1,209 +1,148 @@
-# Carregando bibliotecas
+import streamlit as st
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
-import matplotlib.pyplot as plt
-import matplotlib as mpl
-import streamlit as st
-import plotly.express as px
-from st_aggrid import GridOptionsBuilder, AgGrid, GridUpdateMode, DataReturnMode
-from io import BytesIO
-from pyxlsb import open_workbook as open_xlsb
+from st_aggrid import AgGrid, GridUpdateMode
+from st_aggrid.grid_options_builder import GridOptionsBuilder
+from simulador_financeiro import simulador
+from datetime import datetime
 
+def diff_month(d1, d2):
+    return (d1.year - d2.year) * 12 + d1.month - d2.month + 1
 
-# Criação da função
-def aumento_cumulativo(lista, porc_aumento):
-    for i, valor in enumerate(lista):
-        lista[i] = lista[i-1] * (1 + porc_aumento) if i > 0 else valor
-    return lista
+def main():
+    ########## Sidebar ##########
+    
+    ########## Datas
+    anos = range(1970, 2101)
+    meses = [
+        'Janeiro',
+        'Fevereiro',
+        'Março',
+        'Abril',
+        'Maio',
+        'Junho',
+        'Julho',
+        'Agosto',
+        'Setembro',
+        'Outubro',
+        'Novembro',
+        'Dezembro'
+    ]
+    
+    with st.sidebar:
+        st.title("Controles do simulador")
+        st.markdown("""Preencha os campos  para controlar sua simulação, caso não precise de alguma das informações, deixe o campo em branco ou com o número zero.""")
+        # Data inicio
+        st.subheader("Data Inicio Simulação")
+        ano_inicio = st.selectbox('Ano Inicio', anos)
+        mes_inicio = st.selectbox('Mês Inicio', meses)
 
-def simulador(data_inicio = '2021-09-01',
-              data_fim = '2024-12-01',
-              aporte_inicial = 0,
-              aporte_mensal = 0,
-              aumento_aporte = 0,
+        get_mes_number = lambda mes: str(meses.index(mes) + 1).zfill(2)
+        data_inicio = f'{ano_inicio}-{get_mes_number(mes_inicio)}-01'
 
-              meses_bonus = [],
-              valor_bonus = 0,
-              crescimento_bonus = 0,
+        # Data Fim
+        st.subheader("Data Fim Simulação")
+        ano_filtrado = filter(lambda ano: ano >= ano_inicio, anos)
+        ano_fim = st.selectbox('Ano Fim', ano_filtrado)
 
-              rendimento_anual = 0,
-              dados_reais = []):
-  
-    # Rendimento mensal
-    rendimento_mensal = ((1 + rendimento_anual) ** (1/12)) - 1
+        meses_filtrados = meses[meses.index(mes_inicio):]
+        lista_meses_fim = meses_filtrados if ano_inicio == ano_fim else meses
+        mes_fim = st.selectbox('Mês Fim', lista_meses_fim)
+        data_fim = f'{ano_fim}-{get_mes_number(mes_fim)}-01'
 
-    # Corrigindo tamanho dos dados reais
-    if len(dados_reais) > 0:
-        dados_reais = dados_reais.loc[dados_reais['data'] <= data_fim]
+        # Informações sobre aporte
+        st.subheader('Aportes')
+        aporte_inicial = st.number_input("Qual será o primeiro aporte?", value=0.0)
+        aporte_mensal = st.number_input("Quantos reais você deseja aportar por mês?", value=0.0)
+        aumento_aporte = st.number_input("Qual a porcentagem de aumento desse aporte mês a mês?", value=0.0)
+        aumento_aporte = aumento_aporte / 100
 
-    # Data máxima disponibilizada
-    try:
-        data_real_max = dados_reais['data'].max()
-    except:
-        pass
+        # Aportes Bônus
+        st.subheader('Aportes Bônus')
+        meses_bonus = st.multiselect("Escolha os meses onde você fará aportes complementares caso existam, por exemplo vindo de bônus, décimo terceiro e etc...", meses)
+        meses_bonus = list(map(lambda mes: int(get_mes_number(mes)), meses_bonus))
+        valor_bonus = st.number_input("Qual seria o valor inicial desses aportes bônus?", value=0.0)
+        crescimento_bonus = st.number_input("Qual a porcentagem de aumento desses aportes a cada ocorrência?", value=0.0)
+        crescimento_bonus = crescimento_bonus / 100
 
-    # Criando dataframe em branco
-    df = pd.DataFrame(columns = ['data','aporte','custodia'])
+        # Informações Complementares
+        st.subheader('Informações Complementares')
+        rendimento_anual = st.number_input("Qual será a porcentagem de rendimento anual de seu patrimônio?", value=0.0)
+        rendimento_anual = rendimento_anual / 100
 
-    df['data'] = pd.to_datetime(pd.date_range(data_inicio,
-                                            data_fim,
-                                            freq='MS').strftime("%Y-%m"), 
-                              format="%Y-%m")
+        # Adicionando tabela histórica
+        st.subheader('Histórico personalizado')
+        st.markdown("""
+        Caso você já tenha algum histórico de aportes, use ele em formato excel e passe para o app utiliza-lo,
+        lembrando que o excel precisa ter 3 colunas, data, aporte e custodia, seguindo o modelo abaixo:
+        """)
 
-    #Preenchendo coluna de aportes
-    if len(dados_reais) == 0:
-        if aporte_inicial <= 0:
-            df['aporte'] = aumento_cumulativo([aporte_mensal] * len(df['data']),
-                                              aumento_aporte)
+        df = pd.DataFrame({'data':['2022-01-01', '2022-02-01', '2022-03-01','2022-04-01'],
+                            'aporte':[1250, 1300, 1100, 1700],
+                            'custodia':[1251, 2560, 3665, 5380]})
+
+        # CSS to inject contained in a string
+        hide_table_row_index = """
+                <style>
+                thead tr th:first-child {display:none}
+                tbody th {display:none}
+                </style>
+                """
+        # Inject CSS with Markdown
+        st.markdown(hide_table_row_index, unsafe_allow_html=True)
+
+        st.table(df)
+        st.markdown("""
+        - **data:** O aplicativo lê apenas o ano e o mês, mas o dia também precisa estar presente, é importante que o excel tenha entendido essa coluna como data
+        
+        - **aporte:** É o valor que foi guardado no mês descrito na coluna data
+        
+        - **custodia:** É o valor que você tinha disponível depois do aporte no fim do mês da data (esse valor precisa incluir os rendimentos para uma simulação mais realista)
+        
+        """)
+        file = st.file_uploader('Abaixo, faça o upload de um arquivo excel:')
+
+        if file is not None:
+            upload_df = pd.read_excel(file)
+            
+            fdata_inicio = datetime.strptime(data_inicio, '%Y-%m-%d')
+            primeira_data_ok = upload_df['data'].min() == fdata_inicio
+            primeira_data_nok = upload_df['data'].min() != fdata_inicio
+            
+            diff_datas = diff_month(upload_df['data'].max(), upload_df['data'].min())
+            qtd_datas_ok = diff_datas == len(upload_df)
+            qtd_datas_nok = diff_datas != len(upload_df)
+            
+            if primeira_data_ok & qtd_datas_ok:
+                upload_df_plot = upload_df.copy()
+                upload_df_plot.loc[:,'data'] = upload_df['data'].dt.strftime('%Y-%m-%d')
+                st.table(upload_df_plot)
+            else:
+                upload_df = []
+                if primeira_data_nok:
+                    st.markdown('''*ATENÇÃO!!! A primeira data de seu arquivo não coincide com a primeira data que você passou nos controles, por conta disso a tabela não será utilizada, por favor atualize a data inicial ou seu arquivo*''')
+                elif qtd_datas_nok:
+                    st.markdown('''*ATENÇÃO!!! Existem meses faltando entre o primeiro e último mês de seu arquivo, por favor atualize seu arquivo para que ele possa ser utilizado*''')
+                
         else:
-            df['aporte'] = [aporte_inicial] + aumento_cumulativo([aporte_mensal] * (len(df['data']) - 1),
-                                              aumento_aporte)
-    else:
-        aporte_artificial = ([aporte_mensal] * (len(df['data']) -
-                                                len(dados_reais['aporte'])))
+            upload_df = []
 
-        df['aporte'] = (dados_reais['aporte'].tolist() + 
-                        aumento_cumulativo(aporte_artificial, aumento_aporte))
+            
+    ########## Título Página ##########
+    st.title("Simulador Financeiro")
+    simulador(
+        data_inicio = data_inicio,
+        data_fim = data_fim,
+        aporte_inicial = aporte_inicial,
+        aporte_mensal = aporte_mensal,
+        aumento_aporte = aumento_aporte,
 
-    # Adicionando o bônus à lista de aportes
-    if len(dados_reais) == 0:
-        cond = df['data'].dt.month.isin(meses_bonus)
-    else:
-        cond = ((df['data'].dt.month.isin(meses_bonus)) &
-                (df['data'] > data_real_max))
+        meses_bonus = meses_bonus,
+        valor_bonus = valor_bonus,
+        crescimento_bonus = crescimento_bonus,
 
-    lista_aportes = df.loc[cond,'aporte'].tolist()
-
-    if len(lista_aportes) > 0:
-        lista_aportes[0] = lista_aportes[0] + valor_bonus
-
-    lista_aportes = aumento_cumulativo(lista_aportes, crescimento_bonus)
-
-    df.loc[cond,'aporte'] = lista_aportes
-
-    # Preenchendo coluna de custódia
-    def func_addcustodia(df, na = False):
-        df_iter = df if na == False else df.loc[df['custodia'].isna()]
-        for i, row in df_iter.iterrows():
-            df.loc[i,'custodia'] = (df.loc[i,'aporte'] if i == 0 
-                                  else df.loc[i-1,'custodia'] * (1 + rendimento_mensal) + df.loc[i,'aporte'])
-        return df['custodia']
-
-    if len(dados_reais) == 0:
-        df['custodia'] = func_addcustodia(df)
-    else:
-        df = df[['data','aporte']].merge(dados_reais[['data','custodia']],
-                                         on = 'data',
-                                         how='left')
-
-        df.loc[:,'custodia'] = func_addcustodia(df, na = True)
-
-    num_to_str = lambda valor: (str("R$ {:,.2f}"
-                              .format(round(valor,2)))
-                              .replace('.','#')
-                              .replace(',','%')
-                              .replace('#',',')
-                              .replace('%','.'))
-
-    data_max = df['data'].max()
-
-    total_aportado = df['aporte'].sum()
-
-    rendimento = df.loc[df['data'] == data_max,'custodia'].iloc[0] - total_aportado
-    desconto_ir = rendimento * 0.15
-    rendimento_porc = round( (rendimento - desconto_ir) / total_aportado * 100, 2) 
-
-    # Desconto de IR no saque
-    df.loc[df['data'] == data_max,'custodia'] = df.loc[df['data'] == data_max,'custodia'] - desconto_ir
-    total_liquido = df.loc[df['data'] == data_max,'custodia'].iloc[0]
-
-
-    #
-    #st.metric(label="Total Líquido", value=num_to_str(total_liquido))
-    st.markdown("""---------------------------------------""")
-    col1, col2 = st.columns(2)
-    col1.markdown("""
-    \nTotal Aportado: {0}
-    \nRendimento: {1}
-    \nDesconto IR: {2}
-    """.format(
-        num_to_str(total_aportado),
-        num_to_str(rendimento),
-        num_to_str(desconto_ir)
-        )
+        rendimento_anual = rendimento_anual,
+        dados_reais = upload_df
     )
-    rendimento_porc = 0 if rendimento == 0 else rendimento_porc
-    col2.metric(label="Total Líquido", value=num_to_str(total_liquido), delta=str(rendimento_porc)+'%')
-    
-    
-    # Mudando formato das colunas para exibição
-    aporte_serie = df['aporte']
-    custodia_serie = df['custodia']
-    df_plot = df.copy()
-    
-    df['aporte'] = df['aporte'].apply(num_to_str)
-    df['custodia'] = df['custodia'].apply(num_to_str)
-
-    ### Congiruação Tabela
-    st.markdown("""---------------------------------------""")
-    st.subheader('Resultado Tabela')
-    
-    
-    df.loc[:,'data'] = df['data'].dt.strftime('%Y-%m-%d')
-    df_plot.loc[:,'data'] = df_plot['data'].dt.strftime('%Y-%m-%d')
-    
-    gb = GridOptionsBuilder.from_dataframe(df_plot)
-    gb.configure_pagination(paginationAutoPageSize=True) #Add pagination
-    gb.configure_side_bar() #Add a sidebar
-    gridOptions = gb.build()
-    
-    grid_response = AgGrid(
-        df,
-        gridOptions=gridOptions,
-        data_return_mode='AS_INPUT', 
-        update_mode='MODEL_CHANGED', 
-        fit_columns_on_grid_load=False,
-        theme='streamlit', #Add theme color to the table
-        enable_enterprise_modules=True,
-        height=500, 
-        width='100%',
-        reload_data=True
-    )
-    
-    def to_excel(df):
-        output = BytesIO()
-        writer = pd.ExcelWriter(output, engine='xlsxwriter')
-        df.to_excel(writer, index=False, sheet_name='Sheet1')
-        workbook = writer.book
-        worksheet = writer.sheets['Sheet1']
-        format1 = workbook.add_format({'num_format': '0.00'}) 
-        worksheet.set_column('A:A', None, format1)  
-        writer.save()
-        processed_data = output.getvalue()
-        return processed_data
-    
-    st.download_button(label="Download tabela", data = to_excel(df_plot), file_name = 'dinheiro_simulado.xlsx')
-    
-    ### Configuração Gráfico
-    st.markdown("""---------------------------------------""")
-    st.subheader('Gráfico de evolução patrimônial')
-    
-    fig = px.line(df_plot, x='data', y='custodia', markers=True)
-    fig.update_layout(
-        xaxis=dict(
-            showline=True,
-            showgrid=False,
-            showticklabels=True,
-            ticks='outside'),
-        yaxis=dict(
-            tickmode = "array",
-            showline=True,
-            showgrid=False,
-            showticklabels=True,
-            ticks='outside')
-    )
-    st.plotly_chart(fig, use_container_width=True)
-
-    
-    return df
+if __name__ == '__main__':
+    main()

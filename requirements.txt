@@ -1,0 +1,8 @@
+streamlit
+pandas
+numpy
+st_aggrid
+datetime
+matplotlib
+io
+pyxlsb

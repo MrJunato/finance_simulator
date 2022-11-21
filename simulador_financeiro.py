@@ -106,10 +106,10 @@ def simulador(data_inicio = '2021-09-01',
     total_aportado = df['aporte'].sum()
 
     rendimento = df.loc[df['data'] == data_max,'custodia'].iloc[0] - total_aportado
-    rendimento_porc = round((df.loc[df['data'] == data_max,'custodia'].iloc[0] - total_aportado) / df.loc[df['data'] == data_max,'custodia'].iloc[0] * 100, 2) 
+    desconto_ir = rendimento * 0.15
+    rendimento_porc = round( (rendimento - desconto_ir) / total_aportado * 100, 2) 
 
     # Desconto de IR no saque
-    desconto_ir = rendimento * 0.15
     df.loc[df['data'] == data_max,'custodia'] = df.loc[df['data'] == data_max,'custodia'] - desconto_ir
     total_liquido = df.loc[df['data'] == data_max,'custodia'].iloc[0]
 

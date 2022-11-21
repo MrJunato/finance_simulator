@@ -3,3 +3,4 @@ matplotlib
 plotly
 pyxlsb
 XlsxWriter
+openpyxl

@@ -57,7 +57,7 @@ def simulador(data_inicio = '2021-09-01',
             df['aporte'] = aumento_cumulativo([aporte_mensal] * len(df['data']),
                                               aumento_aporte)
         else:
-            df['aporte'] = aumento_cumulativo([aporte_inicial] + [aporte_mensal] * (len(df['data']) - 1),
+            df['aporte'] = [aporte_inicial] + aumento_cumulativo([aporte_mensal] * (len(df['data']) - 1),
                                               aumento_aporte)
     else:
         aporte_artificial = ([aporte_mensal] * (len(df['data']) -

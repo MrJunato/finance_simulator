@@ -1,3 +1,4 @@
 streamlit-aggrid
 matplotlib
 plotly
+pyxlsb

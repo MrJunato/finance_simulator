@@ -5,9 +5,14 @@ from st_aggrid import AgGrid, GridUpdateMode
 from st_aggrid.grid_options_builder import GridOptionsBuilder
 from simulador_financeiro import simulador
 from datetime import datetime
+import pyautogui
 
 def diff_month(d1, d2):
     return (d1.year - d2.year) * 12 + d1.month - d2.month + 1
+
+def clear_fields():
+    ano_inicio.clear()
+    mes_inicio.clear()
 
 def main():
     ########## Sidebar ##########
@@ -32,11 +37,15 @@ def main():
     with st.sidebar:
         st.title("Controles do simulador")
         st.markdown("""Preencha os campos  para controlar sua simulação, caso não precise de alguma das informações, deixe o campo em branco ou com o número zero.""")
+        
+        # Limpando campos
+        if st.button("Limpar campos"):
+            pyautogui.hotkey("ctrl","F5")
+        
         # Data inicio
         st.subheader("Data Inicio Simulação")
         ano_inicio = st.selectbox('Ano Inicio', anos)
         mes_inicio = st.selectbox('Mês Inicio', meses)
-
         get_mes_number = lambda mes: str(meses.index(mes) + 1).zfill(2)
         data_inicio = f'{ano_inicio}-{get_mes_number(mes_inicio)}-01'
 

@@ -4,3 +4,4 @@ plotly
 pyxlsb
 XlsxWriter
 openpyxl
+PyAutoGUI

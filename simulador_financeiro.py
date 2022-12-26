@@ -118,9 +118,6 @@ def simulador(data_inicio = '2021-09-01',
     df.loc[df['data'] == data_max,'custodia'] = df.loc[df['data'] == data_max,'custodia'] - desconto_ir
     total_liquido = df.loc[df['data'] == data_max,'custodia'].iloc[0]
 
-
-    #
-    #st.metric(label="Total Líquido", value=num_to_str(total_liquido))
     st.markdown("""---------------------------------------""")
     col1, col2 = st.columns(2)
     col1.markdown("""
@@ -145,7 +142,7 @@ def simulador(data_inicio = '2021-09-01',
     df['aporte'] = df['aporte'].apply(num_to_str)
     df['custodia'] = df['custodia'].apply(num_to_str)
 
-    ### Congiruação Tabela
+    ### Configuração Tabela
     st.markdown("""---------------------------------------""")
     st.subheader('Resultado Tabela')
     

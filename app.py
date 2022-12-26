@@ -9,10 +9,6 @@ from datetime import datetime
 def diff_month(d1, d2):
     return (d1.year - d2.year) * 12 + d1.month - d2.month + 1
 
-def clear_fields():
-    ano_inicio.clear()
-    mes_inicio.clear()
-
 def main():
     ########## Sidebar ##########
     

@@ -76,9 +76,9 @@ def simulador(data_inicio = '2021-09-01',
     lista_aportes = df.loc[cond,'aporte'].tolist()
 
     if len(lista_aportes) > 0:
-        lista_aportes[0] = lista_aportes[0] + valor_bonus
-
-    lista_aportes = aumento_cumulativo(lista_aportes, crescimento_bonus)
+        lista_bonus = [valor_bonus] * len(lista_aportes)
+        lista_bonus = aumento_cumulativo(lista_bonus, crescimento_bonus)
+        lista_aportes = np.array(lista_aportes) + np.array(lista_bonus)
 
     df.loc[cond,'aporte'] = lista_aportes
 
